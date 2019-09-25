@@ -10,34 +10,14 @@ use structopt::StructOpt;
 
 mod commit_id;
 mod commit_list;
-mod cli;
-
-/// The command the program will run along with global options
-#[derive(Debug, StructOpt)]
-pub struct Options {
-    #[structopt(subcommand)]
-    cmd: Command,
-    db_file: PathBuf,
-}
-
-/// The command the program will run
-#[derive(Debug, StructOpt)]
-enum Command {
-    IngestListFile {
-        file: CommitListFile,
-    },
-    IngestCommit {
-        id: CommitId,
-        note: Option<CommitNote>
-    },
-    CollectGitMeta,
-    RunAll,
-}
+mod exec;
+mod opts;
 
 /// A path to a file containing a newline-separated list of commit ID's (SHA1s),
 /// pontentially followed by a spacec and arbitrary description
 type CommitListFile = PathBuf;
 
+#[derive(Debug, StructOpt)]
 struct CommitRecord {
     id: CommitId,
     note: Option<CommitNote>,
@@ -50,17 +30,8 @@ use self::commit_id::CommitId;
 type CommitNote = String;
 
 fn main() {
+    use opts::Options;
+
     let opts = Options::from_args();
     println!("{:?}", opts);
-}
-
-
-/// Command execution
-mod exec {
-    use super::{Options, Command};
-
-    use super::commit_list::CommitList;
-    
-    fn run_command(opts: &Options) { }
-
 }
