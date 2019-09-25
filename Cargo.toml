@@ -9,6 +9,8 @@ edition = "2018"
 [dependencies]
 atomic_blobject = { path = "../atomic_blobject" }
 clap = "2.33.0"
-structopt = "0.3.1"
-derive_more = "0.15.0"
+fancy_flocks = { path = "../fancy_flocks" }
 hex = "0.3"
+derive_more = "0.15.0"
+parse_list = { path = "../parse_list" }
+structopt = "0.3.1"

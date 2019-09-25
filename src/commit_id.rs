@@ -3,6 +3,7 @@ use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 use hex::FromHexError;
 
+#[derive(Debug)]
 pub struct CommitId(String);
 
 impl FromStr for CommitId {

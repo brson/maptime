@@ -182,7 +182,9 @@ dependencies = [
  "atomic_blobject 0.1.0",
  "clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "derive_more 0.15.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "fancy_flocks 0.1.0",
  "hex 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parse_list 1.0.0",
  "structopt 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -190,6 +192,10 @@ dependencies = [
 name = "memchr"
 version = "2.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "parse_list"
+version = "1.0.0"
 
 [[package]]
 name = "proc-macro-error"

@@ -1,6 +1,7 @@
 use std::error::Error as StdError;
 use std::fmt::{self, Display, Formatter};
 use super::CommitListFile;
+use super::CommitId;
 use super::CommitNote;
 
 /// List of commits as described by the user,
