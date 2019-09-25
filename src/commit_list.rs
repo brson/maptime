@@ -1,15 +1,20 @@
+use std::path::Path;
 use std::error::Error as StdError;
 use std::fmt::{self, Display, Formatter};
-use super::CommitListFile;
-use super::CommitId;
-use super::CommitNote;
+use crate::commit_id::CommitId;
+
+#[derive(Debug, StructOpt)]
+pub struct CommitInput {
+    id: CommitId,
+    note: Option<String>,
+}
 
 /// List of commits as described by the user,
 /// Binary-sorted and deduplicated
-pub struct CommitList(Vec<CommitNote>);
+pub struct CommitList(Vec<CommitInput>);
 
 impl CommitList {
-    pub fn ingest(file: &CommitListFile) -> Result<Self, Error> {
+    pub fn ingest(file: &Path) -> Result<Self, Error> {
         panic!()
     }
 }
@@ -24,4 +29,3 @@ impl Display for Error {
         panic!()
     }
 }
-
