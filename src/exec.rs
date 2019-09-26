@@ -1,3 +1,6 @@
+use crate::cargo;
+use std::time::{Instant, Duration};
+use chrono::{DateTime, Utc};
 use crate::git;
 use std::path::Path;
 use atomic_blobject::AtomBlob;
@@ -95,6 +98,8 @@ fn resolve_commits(opts: &GlobalOptions) -> Result<(), Error> {
 }
 
 fn run_all(opts: &GlobalOptions) -> Result<(), Error> {
+    use crate::data::{Profile, Timing};
+    
     let mut data = load_data(&opts.db_file)?;
     let mut counter = 0;
 
@@ -107,12 +112,48 @@ fn run_all(opts: &GlobalOptions) -> Result<(), Error> {
             return Err(Error::NoCommits);
         }
     }
-    
-    loop {
-        let mut data = data.get_mut()?;
 
-        data.commit()?;
+    let commits: Vec<_> = {
+        let data = data.get()?;
+        data.commits.keys().cloned().collect()
+    };
+
+    let start_commit = git::current_commit(&opts.repo_path)?;
+
+    for commit in &commits {
+        println!("checking out {}", commit.as_ref());
+        git::checkout(&opts.repo_path, commit)?;
+
+        let profiles = [
+            Profile::FullDev,
+            Profile::PartialDev,
+            Profile::FullRelease,
+            Profile::PartialRelease,
+        ];
+
+        for profile in profiles.iter().cloned() {
+            let start_date = Utc::now();
+            let start = Instant::now();
+
+            let project_path = opts.project_path.as_ref().unwrap_or(&opts.repo_path);
+            cargo::build(project_path, profile)?;
+
+            let dur = start.elapsed();
+
+            let timing = Timing {
+                profile: profile,
+                start: start_date,
+                duration: dur,
+            };
+
+            let mut data = data.get_mut()?;
+            data.timings.entry(commit.clone()).or_insert(vec![]).push(timing);
+            data.commit()?;
+        }
     }
+
+    println!("restoring start commit {}", start_commit.as_ref());
+    git::checkout(&opts.repo_path, &start_commit)?;
 
     println!("done. timed {} commits", counter);
 
@@ -129,6 +170,8 @@ pub enum Error {
     UnresolvedCommits,
     #[display(fmt = "no commits to test. add with `maptime ingest-commit`")]
     NoCommits,
+    #[display(fmt = "running cargo")]
+    Cargo(crate::cargo::Error),
 }
 
 impl StdError for Error {
@@ -138,6 +181,7 @@ impl StdError for Error {
             Error::Git(ref e) => Some(e),
             Error::UnresolvedCommits => None,
             Error::NoCommits => None,
+            Error::Cargo(ref e) => Some(e),
         }
     }
 }
@@ -151,5 +195,11 @@ impl From<atomic_blobject::Error> for Error {
 impl From<crate::git::Error> for Error {
     fn from(e: crate::git::Error) -> Error {
         Error::Git(e)
+    }
+}
+
+impl From<crate::cargo::Error> for Error {
+    fn from(e: crate::cargo::Error) -> Error {
+        Error::Cargo(e)
     }
 }

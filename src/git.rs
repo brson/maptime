@@ -38,6 +38,14 @@ pub fn read_commit(path: &Path, commit: &CommitInput) -> Result<Commit, Error> {
     })
 }
 
+pub fn current_commit(path: &Path) -> Result<CommitId, Error> {
+    panic!()
+}
+
+pub fn checkout(path: &Path, commit: &CommitId) -> Result<(), Error> {
+    panic!()
+}
+
 #[derive(Debug)]
 pub enum Error {
     GitExec(std::io::Error),

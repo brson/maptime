@@ -9,6 +9,7 @@ extern crate structopt;
 
 mod commit_id;
 mod commit_list;
+mod cargo;
 mod data;
 mod exec;
 mod git;

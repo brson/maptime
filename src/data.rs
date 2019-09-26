@@ -10,7 +10,7 @@ use std::time::Duration;
 pub struct Data {
     pub unresolved_commits: Vec<CommitInput>,
     pub commits: BTreeMap<CommitId, Commit>,
-    pub timings: BTreeMap<CommitId, Vec<TimingSet>>,
+    pub timings: BTreeMap<CommitId, Vec<Timing>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -21,15 +21,16 @@ pub struct Commit {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct TimingSet {
-    pub full_release: Timing,
-    pub partial_release: Timing,
-    pub full_dev: Timing,
-    pub partial_dev: Timing,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
 pub struct Timing {
+    pub profile: Profile,
     pub start: DateTime<Utc>,
     pub duration: Duration,
+}
+
+#[derive(Debug, Serialize, Deserialize, Copy, Clone)]
+pub enum Profile {
+    FullRelease,
+    PartialRelease,
+    FullDev,
+    PartialDev,
 }
