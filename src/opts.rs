@@ -24,7 +24,7 @@ pub enum Command {
     IngestCommitList {
         file: PathBuf,
     },
-    CollectGitMeta,
+    ResolveCommits,
     RunAll,
 }
 
@@ -34,4 +34,6 @@ pub struct GlobalOptions {
     pub db_file: PathBuf,
     #[structopt(long, default_value = ".")]
     pub repo_path: PathBuf,
+    #[structopt(long)]
+    pub project_path: Option<PathBuf>,
 }

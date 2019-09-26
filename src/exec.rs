@@ -1,3 +1,4 @@
+use crate::git;
 use std::path::Path;
 use atomic_blobject::AtomBlob;
 use std::error::Error as StdError;
@@ -17,10 +18,12 @@ pub fn run_command(opts: &Options) -> Result<(), Error> {
         Command::IngestCommitList { .. } => {
             panic!()
         }
-        Command::CollectGitMeta => {
-            collect_git_meta(&opts.global)
+        Command::ResolveCommits => {
+            resolve_commits(&opts.global)
         }
-        _ => { panic!() }
+        Command::RunAll => {
+            run_all(&opts.global)
+        }
     }
 }
 
@@ -68,25 +71,50 @@ fn ingest_commit(opts: &GlobalOptions, commit: CommitInput) -> Result<(), Error>
     Ok(data.commit()?)
 }
 
-fn collect_git_meta(opts: &GlobalOptions) -> Result<(), Error> {
-    use crate::git;
-
+fn resolve_commits(opts: &GlobalOptions) -> Result<(), Error> {
     let mut data = load_data(&opts.db_file)?;
+
+    loop {
+        let full_commit = {
+            let data = data.get()?;
+
+            if let Some(basic_commit) = data.unresolved_commits.last().clone() {
+                git::read_commit(&opts.repo_path, &basic_commit)?
+            } else {
+                break;
+            }
+        };
+
+        let mut data = data.get_mut()?;
+        data.commits.insert(full_commit.id.clone(), full_commit);
+        data.unresolved_commits.pop();
+        data.commit()?;
+    }
+
+    Ok(())
+}
+
+fn run_all(opts: &GlobalOptions) -> Result<(), Error> {
+    let mut data = load_data(&opts.db_file)?;
+    let mut counter = 0;
+
+    {
+        let data = data.get()?;
+        if !data.unresolved_commits.is_empty() {
+            return Err(Error::UnresolvedCommits);
+        }
+        if data.commits.is_empty() {
+            return Err(Error::NoCommits);
+        }
+    }
+    
     loop {
         let mut data = data.get_mut()?;
 
-        if let Some(basic_commit) = data.unresolved_commits.last().clone() {
-            let full_commit = git::read_commit(&opts.repo_path, &basic_commit)?;
-
-            data.commits.insert(full_commit);
-            
-            data.unresolved_commits.pop();
-        } else {
-            break;
-        }
-
         data.commit()?;
     }
+
+    println!("done. timed {} commits", counter);
 
     Ok(())
 }
@@ -97,6 +125,10 @@ pub enum Error {
     AtomBlob(atomic_blobject::Error),
     #[display(fmt = "running git")]
     Git(crate::git::Error),
+    #[display(fmt = "database contains unresolved commits. run `maptime resolve-commits`")]
+    UnresolvedCommits,
+    #[display(fmt = "no commits to test. add with `maptime ingest-commit`")]
+    NoCommits,
 }
 
 impl StdError for Error {
@@ -104,6 +136,8 @@ impl StdError for Error {
         match self {
             Error::AtomBlob(ref e) => Some(e),
             Error::Git(ref e) => Some(e),
+            Error::UnresolvedCommits => None,
+            Error::NoCommits => None,
         }
     }
 }
