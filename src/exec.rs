@@ -119,6 +119,7 @@ fn run_all(opts: &GlobalOptions) -> Result<(), Error> {
     };
 
     let start_commit = git::current_commit(&opts.repo_path)?;
+    println!("saving start commit {}", start_commit.as_ref());
 
     for commit in &commits {
         println!("checking out {}", commit.as_ref());

@@ -5,9 +5,23 @@ use std::error::Error as StdError;
 use crate::commit_id::CommitId;
 use crate::commit_list::CommitInput;
 use crate::data::Commit;
+use std::process::Command;
 
 pub fn read_commit(path: &Path, commit: &CommitInput) -> Result<Commit, Error> {
-    use std::process::Command;
+    let date = read_commit_date(path, commit.id.as_ref())?;
+
+    Ok(Commit {
+        id: commit.id.clone(),
+        date,
+        note: commit.note.clone(),
+    })
+}
+
+pub fn current_commit(path: &Path) -> Result<CommitId, Error> {
+    read_commit_date(path, "HEAD")
+}
+
+pub fn read_commit_date(path: &Path, commit: &str) -> Result<DateTime<Utc>, Error> {
     let mut cmd = Command::new("git");
     let cmd = cmd
         .arg("-C")
@@ -30,16 +44,6 @@ pub fn read_commit(path: &Path, commit: &CommitInput) -> Result<Commit, Error> {
     let date = date.trim();
     let date = DateTime::parse_from_rfc2822(date).map_err(|e| Error::DateParse(e))?;
     let date = DateTime::<Utc>::from(date);
-
-    Ok(Commit {
-        id: commit.id.clone(),
-        date,
-        note: commit.note.clone(),
-    })
-}
-
-pub fn current_commit(path: &Path) -> Result<CommitId, Error> {
-    panic!()
 }
 
 pub fn checkout(path: &Path, commit: &CommitId) -> Result<(), Error> {
