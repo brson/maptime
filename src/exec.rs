@@ -4,11 +4,21 @@ use std::error::Error as StdError;
 use crate::commit_list::CommitList;
 use crate::opts::{Options, Command, GlobalOptions};
 use crate::data::Data;
+use crate::commit_list::CommitInput;
 
 pub fn run_command(opts: &Options) -> Result<(), Error> {
     match opts.cmd {
         Command::ListCommits => {
             list_commits(&opts.global)
+        }
+        Command::IngestCommit(ref commit) => {
+            ingest_commit(&opts.global, commit.clone())
+        }
+        Command::IngestCommitList { .. } => {
+            panic!()
+        }
+        Command::CollectGitMeta => {
+            collect_git_meta(&opts.global)
         }
         _ => { panic!() }
     }
@@ -50,16 +60,50 @@ fn list_commits(opts: &GlobalOptions) -> Result<(), Error> {
     Ok(())
 }
 
+fn ingest_commit(opts: &GlobalOptions, commit: CommitInput) -> Result<(), Error> {
+    let mut data = load_data(&opts.db_file)?;
+    let mut data = data.get_mut()?;
+
+    data.unresolved_commits.push(commit);
+    Ok(data.commit()?)
+}
+
+fn collect_git_meta(opts: &GlobalOptions) -> Result<(), Error> {
+    use crate::git;
+
+    let mut data = load_data(&opts.db_file)?;
+    loop {
+        let mut data = data.get_mut()?;
+
+        if let Some(basic_commit) = data.unresolved_commits.last().clone() {
+            let full_commit = git::read_commit(&opts.repo_path, &basic_commit)?;
+
+            data.commits.insert(full_commit);
+            
+            data.unresolved_commits.pop();
+        } else {
+            break;
+        }
+
+        data.commit()?;
+    }
+
+    Ok(())
+}
+
 #[derive(Display, Debug)]
 pub enum Error {
     #[display(fmt = "loading blobject")]
     AtomBlob(atomic_blobject::Error),
+    #[display(fmt = "running git")]
+    Git(crate::git::Error),
 }
 
 impl StdError for Error {
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
         match self {
             Error::AtomBlob(ref e) => Some(e),
+            Error::Git(ref e) => Some(e),
         }
     }
 }
@@ -67,5 +111,11 @@ impl StdError for Error {
 impl From<atomic_blobject::Error> for Error {
     fn from(e: atomic_blobject::Error) -> Error {
         Error::AtomBlob(e)
+    }
+}
+
+impl From<crate::git::Error> for Error {
+    fn from(e: crate::git::Error) -> Error {
+        Error::Git(e)
     }
 }

@@ -19,17 +19,19 @@ pub struct Options {
 /// The command the program will run
 #[derive(Debug, StructOpt)]
 pub enum Command {
-    IngestListFile {
+    ListCommits,
+    IngestCommit(CommitInput),
+    IngestCommitList {
         file: PathBuf,
     },
-    IngestCommit(CommitInput),
-    ListCommits,
     CollectGitMeta,
     RunAll,
 }
 
 #[derive(Debug, StructOpt)]
 pub struct GlobalOptions {
-    #[structopt(default_value = "maptime.json")]
+    #[structopt(long, default_value = "maptime.json")]
     pub db_file: PathBuf,
+    #[structopt(long, default_value = ".")]
+    pub repo_path: PathBuf,
 }

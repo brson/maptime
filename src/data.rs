@@ -14,18 +14,18 @@ pub struct Data {
 #[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Commit {
     pub id: CommitId,
-    pub time: DateTime<Utc>,
+    pub date: DateTime<Utc>,
     pub note: Option<String>,
 }
 
 impl Ord for Commit {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.time.cmp(&other.time)
+        self.date.cmp(&other.date)
     }
 }
 
 impl PartialOrd for Commit {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.time.partial_cmp(&other.time)
+        self.date.partial_cmp(&other.date)
     }
 }

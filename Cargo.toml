@@ -15,5 +15,4 @@ derive_more = "0.15.0"
 parse_list = { path = "../parse_list" }
 serde = "1.0.101"
 serde_derive = "1.0.101"
-serde_json = "1.0.40"
 structopt = "0.3.1"

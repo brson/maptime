@@ -3,10 +3,10 @@ use std::error::Error as StdError;
 use std::fmt::{self, Display, Formatter};
 use crate::commit_id::CommitId;
 
-#[derive(Debug, StructOpt, Serialize, Deserialize)]
+#[derive(Debug, StructOpt, Serialize, Deserialize, Clone)]
 pub struct CommitInput {
-    id: CommitId,
-    note: Option<String>,
+    pub id: CommitId,
+    pub note: Option<String>,
 }
 
 /// List of commits as described by the user,
