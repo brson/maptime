@@ -3,6 +3,8 @@
 #[macro_use]
 extern crate derive_more;
 #[macro_use]
+extern crate serde_derive;
+#[macro_use]
 extern crate structopt;
 
 mod commit_id;
@@ -19,7 +21,7 @@ fn main() {
 
     let opts = Options::from_args();
 
-    eprintln!("opts: {:?}", opts);
+    eprintln!("opts: {:#?}", opts);
 
     if let Err(e) = exec::run_command(&opts) {
         eprintln!("error: {}", e);

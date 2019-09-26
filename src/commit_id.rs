@@ -4,7 +4,7 @@ use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 use hex::FromHexError;
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct CommitId(String);
 
 impl FromStr for CommitId {

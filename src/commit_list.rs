@@ -3,7 +3,7 @@ use std::error::Error as StdError;
 use std::fmt::{self, Display, Formatter};
 use crate::commit_id::CommitId;
 
-#[derive(Debug, StructOpt)]
+#[derive(Debug, StructOpt, Serialize, Deserialize)]
 pub struct CommitInput {
     id: CommitId,
     note: Option<String>,
