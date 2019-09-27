@@ -39,17 +39,25 @@ pub fn read_commit_id(path: &Path, commit: &str) -> Result<CommitId, Error> {
     Ok(id)
 }
 
+pub fn checkout(path: &Path, commit: &CommitId) -> Result<(), Error> {
+    run_git(path, "checkout", commit.as_ref(), &[]).map(|_| ())
+}
+
 fn read_commit_stdout(path: &Path, commit: &str, format: &str) -> Result<String, Error> {
+    run_git(path, "log", commit, &["-1", &format!("--pretty={}", format)])
+}
+
+fn run_git(path: &Path, gitcmd: &str, commit: &str, args: &[&str]) -> Result<String, Error> {
     let mut cmd = Command::new("git");
     let cmd = cmd
         .arg("-C")
         .arg(path)
-        .arg("log")
+        .arg(gitcmd)
         .arg(commit)
-        .arg(format!("--pretty={}", format))
-        .arg("-1");
+        .args(args);
 
-    println!("executing git -C {} log {} --pretty={} -1 ", path.display(), commit, format);
+    println!("executing git -C {} {} {} {}",
+             path.display(), gitcmd, commit, args.join(" "));
 
     let out = cmd.output().map_err(|e| Error::GitExec(e))?;
 
@@ -63,10 +71,6 @@ fn read_commit_stdout(path: &Path, commit: &str, format: &str) -> Result<String,
     let stdout = stdout.trim();
 
     Ok(stdout.to_string())
-}
-
-pub fn checkout(path: &Path, commit: &CommitId) -> Result<(), Error> {
-    panic!()
 }
 
 #[derive(Debug)]

@@ -98,7 +98,7 @@ fn resolve_commits(opts: &GlobalOptions) -> Result<(), Error> {
 }
 
 fn run_all(opts: &GlobalOptions) -> Result<(), Error> {
-    use crate::data::{Profile, Timing};
+    use crate::data::{Profile, Timing, RebuildType};
     
     let mut data = load_data(&opts.db_file)?;
     let mut counter = 0;
@@ -125,31 +125,24 @@ fn run_all(opts: &GlobalOptions) -> Result<(), Error> {
         println!("checking out {}", commit.as_ref());
         git::checkout(&opts.repo_path, commit)?;
 
-        let profiles = [
-            Profile::FullDev,
-            Profile::PartialDev,
-            Profile::FullRelease,
-            Profile::PartialRelease,
-        ];
+        let profiles = [Profile::Dev, Profile::Release];
 
         for profile in profiles.iter().cloned() {
             let start_date = Utc::now();
             let start = Instant::now();
 
             let project_path = opts.project_path.as_ref().unwrap_or(&opts.repo_path);
-            let result = cargo::build(project_path, profile)?;
+            let results = cargo::time_build(project_path, profile)?;
 
             let dur = start.elapsed();
 
-            let timing = Timing {
-                profile: profile,
-                start: start_date,
-                duration: dur,
-                result: result,
-            };
-
             let mut data = data.get_mut()?;
-            data.timings.entry(commit.clone()).or_insert(vec![]).push(timing);
+            data.timings.entry(commit.clone()).or_insert(vec![]).push(results.full);
+
+            if let Some(partial_timing) = results.partial {
+                data.timings.entry(commit.clone()).or_insert(vec![]).push(partial_timing);
+            }
+
             data.commit()?;
         }
     }

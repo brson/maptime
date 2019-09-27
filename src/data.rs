@@ -23,6 +23,7 @@ pub struct Commit {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Timing {
     pub profile: Profile,
+    pub rebuild_type: RebuildType,
     pub start: DateTime<Utc>,
     pub duration: Duration,
     pub result: BuildResult,
@@ -31,10 +32,9 @@ pub struct Timing {
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub enum BuildResult { Success, Failure }
 
-#[derive(Debug, Serialize, Deserialize, Copy, Clone)]
-pub enum Profile {
-    FullRelease,
-    PartialRelease,
-    FullDev,
-    PartialDev,
-}
+#[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Copy, Clone)]
+pub enum Profile { Dev, Release }
+
+#[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
+pub enum RebuildType { Full, Partial }
+
