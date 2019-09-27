@@ -6,6 +6,7 @@ use crate::commit_id::CommitId;
 use crate::commit_list::CommitInput;
 use crate::data::Commit;
 use std::process::Command;
+use std::str::FromStr;
 
 pub fn read_commit(path: &Path, commit: &CommitInput) -> Result<Commit, Error> {
     let date = read_commit_date(path, commit.id.as_ref())?;
@@ -18,32 +19,50 @@ pub fn read_commit(path: &Path, commit: &CommitInput) -> Result<Commit, Error> {
 }
 
 pub fn current_commit(path: &Path) -> Result<CommitId, Error> {
-    read_commit_date(path, "HEAD")
+    read_commit_id(path, "HEAD")
 }
 
-pub fn read_commit_date(path: &Path, commit: &str) -> Result<DateTime<Utc>, Error> {
+fn read_commit_date(path: &Path, commit: &str) -> Result<DateTime<Utc>, Error> {
+    let stdout = read_commit_stdout(path, commit, "%cD")?;
+
+    let date = DateTime::parse_from_rfc2822(&stdout).map_err(|e| Error::DateParse(e))?;
+    let date = DateTime::<Utc>::from(date);
+
+    Ok(date)
+}
+
+pub fn read_commit_id(path: &Path, commit: &str) -> Result<CommitId, Error> {
+    let stdout = read_commit_stdout(path, commit, "%cD")?;
+
+    let id = CommitId::from_str(&stdout).map_err(|e| Error::ReadCommitId(e))?;
+
+    Ok(id)
+}
+
+fn read_commit_stdout(path: &Path, commit: &str, format: &str) -> Result<String, Error> {
     let mut cmd = Command::new("git");
     let cmd = cmd
         .arg("-C")
         .arg(path)
         .arg("log")
-        .arg(commit.id.as_ref())
-        .arg("--pretty=%cD")
+        .arg(commit)
+        .arg(format!("--pretty={}", format))
         .arg("-1");
 
-    println!("executing git -C {} log {} --pretty=%cD -1 ", path.display(), commit.id.as_ref());
+    println!("executing git -C {} log {} --pretty={} -1 ", path.display(), commit, format);
 
     let out = cmd.output().map_err(|e| Error::GitExec(e))?;
 
     if !out.status.success() {
+        let commit = commit.to_string();
         let stderr = String::from_utf8_lossy(&out.stderr).into_owned();
-        return Err(Error::GitLog(commit.id.clone(), stderr));
+        return Err(Error::GitLog { commit, stderr });
     }
 
-    let date = std::str::from_utf8(&out.stdout).map_err(|e| Error::RawDateParse(e))?;
-    let date = date.trim();
-    let date = DateTime::parse_from_rfc2822(date).map_err(|e| Error::DateParse(e))?;
-    let date = DateTime::<Utc>::from(date);
+    let stdout = std::str::from_utf8(&out.stdout).map_err(|e| Error::RawDateParse(e))?;
+    let stdout = stdout.trim();
+
+    Ok(stdout.to_string())
 }
 
 pub fn checkout(path: &Path, commit: &CommitId) -> Result<(), Error> {
@@ -53,18 +72,20 @@ pub fn checkout(path: &Path, commit: &CommitId) -> Result<(), Error> {
 #[derive(Debug)]
 pub enum Error {
     GitExec(std::io::Error),
-    GitLog(CommitId, String),
+    GitLog { commit: String, stderr: String },
     RawDateParse(std::str::Utf8Error),
     DateParse(chrono::ParseError),
+    ReadCommitId(crate::commit_id::Error),
 }
 
 impl StdError for Error {
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
         match self {
             Error::GitExec(ref e) => Some(e),
-            Error::GitLog(..) => None,
+            Error::GitLog { .. } => None,
             Error::RawDateParse(ref e) => Some(e),
             Error::DateParse(ref e) => Some(e),
+            Error::ReadCommitId(ref e) => Some(e),
         }
     }
 }
@@ -75,14 +96,17 @@ impl Display for Error {
             Error::GitExec(_) => {
                 write!(f, "executing git")
             }
-            Error::GitLog(ref commit, ref stderr) => {
-                write!(f, "failed to read commit {} from git: {}", commit.as_ref(), stderr)
+            Error::GitLog { ref commit, ref stderr } => {
+                write!(f, "failed to read commit {} from git: {}", commit, stderr)
             }
             Error::RawDateParse(_) => {
                 write!(f, "converting git date to UTF-8")
             }
             Error::DateParse(_) => {
                 write!(f, "parsing date from git")
+            }
+            Error::ReadCommitId(_) => {
+                write!(f, "reading commit id from git")
             }
         }
     }

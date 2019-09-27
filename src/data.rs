@@ -25,7 +25,11 @@ pub struct Timing {
     pub profile: Profile,
     pub start: DateTime<Utc>,
     pub duration: Duration,
+    pub result: BuildResult,
 }
+
+#[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
+pub enum BuildResult { Success, Failure }
 
 #[derive(Debug, Serialize, Deserialize, Copy, Clone)]
 pub enum Profile {

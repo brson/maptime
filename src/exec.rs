@@ -137,7 +137,7 @@ fn run_all(opts: &GlobalOptions) -> Result<(), Error> {
             let start = Instant::now();
 
             let project_path = opts.project_path.as_ref().unwrap_or(&opts.repo_path);
-            cargo::build(project_path, profile)?;
+            let result = cargo::build(project_path, profile)?;
 
             let dur = start.elapsed();
 
@@ -145,6 +145,7 @@ fn run_all(opts: &GlobalOptions) -> Result<(), Error> {
                 profile: profile,
                 start: start_date,
                 duration: dur,
+                result: result,
             };
 
             let mut data = data.get_mut()?;
