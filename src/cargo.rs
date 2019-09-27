@@ -18,10 +18,8 @@ pub struct BuildResultPair {
 }
 
 pub fn time_build(path: &Path, profile: Profile) -> Result<BuildResultPair, Error> {
-    cargo_clean(path)?;
-
     prime_toolchain(path)?;
-
+    cargo_clean(path)?;
     cargo_fetch(path)?;
 
     let full_result = cargo_time_build(path, profile, RebuildType::Full)?;
