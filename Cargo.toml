@@ -12,7 +12,7 @@ chrono = { version = "0.4.9", features = ["serde"] }
 clap = "2.33.0"
 hex = "0.3"
 derive_more = "0.15.0"
-parse_list = "1.0.0"
+parse_list = "2.0.0"
 serde = "1.0.101"
 serde_derive = "1.0.101"
 structopt = "0.3.1"

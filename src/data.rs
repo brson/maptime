@@ -13,7 +13,7 @@ pub struct Data {
     pub timings: BTreeMap<CommitId, Vec<Timing>>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Commit {
     pub id: CommitId,
     pub date: DateTime<Utc>,

@@ -38,8 +38,8 @@ fn list_commits(opts: &GlobalOptions) -> Result<(), Error> {
     let data = data.get()?;
 
     let mut some_commits = false;
-    if !data.unresolved_commits.is_empty() {
-        println!("unresolved commits");
+    if !data.unresolved_commits.is_empty() { 
+       println!("unresolved commits");
         println!("------------------");
         for commit in &data.unresolved_commits {
             println!("{:?}", commit);
@@ -48,9 +48,12 @@ fn list_commits(opts: &GlobalOptions) -> Result<(), Error> {
         some_commits = true;
     }
     if !data.commits.is_empty() {
+        let mut commits: Vec<_> = data.commits.values().collect();
+        commits.sort_by_key(|c| c.date);
+        
         println!("commits");
         println!("-------");
-        for commit in &data.commits {
+        for commit in &commits {
             println!("{:?}", commit);
         }
         println!();
@@ -125,17 +128,19 @@ fn run_all(opts: &GlobalOptions) -> Result<(), Error> {
         }
     }
 
-    let commits: Vec<_> = {
+    let mut commits: Vec<_> = {
         let data = data.get()?;
-        data.commits.keys().cloned().collect()
+        data.commits.values().cloned().collect()
     };
+
+    commits.sort_by_key(|c| c.date);
 
     let start_commit = git::current_commit(&opts.repo_path)?;
     println!("saving start commit {}", start_commit.as_ref());
 
     for commit in &commits {
-        println!("checking out {}", commit.as_ref());
-        git::checkout(&opts.repo_path, commit)?;
+        println!("checking out {}", commit.id.as_ref());
+        git::checkout(&opts.repo_path, &commit.id)?;
 
         let profiles = [Profile::Dev, Profile::Release];
 
@@ -144,10 +149,10 @@ fn run_all(opts: &GlobalOptions) -> Result<(), Error> {
             let results = cargo::time_build(project_path, profile)?;
 
             let mut data = data.get_mut()?;
-            data.timings.entry(commit.clone()).or_insert(vec![]).push(results.full);
+            data.timings.entry(commit.id.clone()).or_insert(vec![]).push(results.full);
 
             if let Some(partial_timing) = results.partial {
-                data.timings.entry(commit.clone()).or_insert(vec![]).push(partial_timing);
+                data.timings.entry(commit.id.clone()).or_insert(vec![]).push(partial_timing);
             }
 
             data.commit()?;
@@ -181,7 +186,7 @@ pub enum Error {
     Cargo(crate::cargo::Error),
     #[display(fmt = "commit list I/O")]
     CommitListIo(std::io::Error),
-    #[display(fmt = "parsing comit")]
+    #[display(fmt = "parsing commit")]
     CommitParse(parse_list::ParseListError<crate::commit_list::Error>),
 }
 
