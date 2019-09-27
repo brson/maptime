@@ -32,7 +32,7 @@ fn read_commit_date(path: &Path, commit: &str) -> Result<DateTime<Utc>, Error> {
 }
 
 pub fn read_commit_id(path: &Path, commit: &str) -> Result<CommitId, Error> {
-    let stdout = read_commit_stdout(path, commit, "%cD")?;
+    let stdout = read_commit_stdout(path, commit, "%H")?;
 
     let id = CommitId::from_str(&stdout).map_err(|e| Error::ReadCommitId(e))?;
 

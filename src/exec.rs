@@ -162,6 +162,8 @@ fn run_all(opts: &GlobalOptions) -> Result<(), Error> {
                 git::checkout_file(project_path, &touched)?;
             }
         }
+
+        counter += 1;
     }
 
     println!("restoring start commit {}", start_commit.as_ref());
