@@ -26,6 +26,7 @@ pub enum Command {
     },
     ResolveCommits,
     RunAll,
+    DumpResults,
 }
 
 #[derive(Debug, StructOpt)]

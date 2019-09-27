@@ -26,6 +26,9 @@ pub fn run_command(opts: &Options) -> Result<(), Error> {
         Command::RunAll => {
             run_all(&opts.global)
         }
+        Command::DumpResults => {
+            dump_results(&opts.global)
+        }
     }
 }
 
@@ -165,6 +168,27 @@ fn run_all(opts: &GlobalOptions) -> Result<(), Error> {
     git::checkout(&opts.repo_path, &start_commit)?;
 
     println!("done. timed {} commits", counter);
+
+    Ok(())
+}
+
+fn dump_results(opts: &GlobalOptions) -> Result<(), Error> {
+    let mut data = load_data(&opts.db_file)?;
+    let data = data.get()?;
+
+    let commits = data.sorted_commits();
+
+    for commit in commits {
+        println!("commit {:?}", commit);
+        let timings = data.timings.get(&commit);
+        if let Some(timings) = timings {
+            for timing in timings {
+                println!("  {:?}", timing);
+            }
+        } else {
+            println!("  no timings");
+        }
+    }
 
     Ok(())
 }
