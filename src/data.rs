@@ -38,3 +38,20 @@ pub enum Profile { Dev, Release }
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub enum RebuildType { Full, Partial }
 
+impl AsRef<str> for Profile {
+    fn as_ref(&self) -> &str {
+        match self {
+            Profile::Dev => "dev",
+            Profile::Release => "release",
+        }
+    }
+}
+
+impl AsRef<str> for RebuildType {
+    fn as_ref(&self) -> &str {
+        match self {
+            RebuildType::Full => "full",
+            RebuildType::Partial => "partial",
+        }
+    }
+}

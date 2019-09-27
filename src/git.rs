@@ -43,6 +43,11 @@ pub fn checkout(path: &Path, commit: &CommitId) -> Result<(), Error> {
     run_git(path, "checkout", commit.as_ref(), &[]).map(|_| ())
 }
 
+pub fn checkout_file(path: &Path, file: &Path) -> Result<(), Error> {
+    let file = file.to_str().ok_or(Error::BadPath)?;
+    run_git(path, "checkout", "HEAD", &[file, "-f"]).map(|_| ())
+}
+
 fn read_commit_stdout(path: &Path, commit: &str, format: &str) -> Result<String, Error> {
     run_git(path, "log", commit, &["-1", &format!("--pretty={}", format)])
 }
@@ -80,6 +85,7 @@ pub enum Error {
     RawDateParse(std::str::Utf8Error),
     DateParse(chrono::ParseError),
     ReadCommitId(crate::commit_id::Error),
+    BadPath,
 }
 
 impl StdError for Error {
@@ -90,6 +96,7 @@ impl StdError for Error {
             Error::RawDateParse(ref e) => Some(e),
             Error::DateParse(ref e) => Some(e),
             Error::ReadCommitId(ref e) => Some(e),
+            Error::BadPath => None,
         }
     }
 }
@@ -111,6 +118,9 @@ impl Display for Error {
             }
             Error::ReadCommitId(_) => {
                 write!(f, "reading commit id from git")
+            }
+            Error::BadPath => {
+                write!(f, "bad git checkout file path")
             }
         }
     }

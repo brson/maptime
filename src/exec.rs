@@ -128,13 +128,8 @@ fn run_all(opts: &GlobalOptions) -> Result<(), Error> {
         let profiles = [Profile::Dev, Profile::Release];
 
         for profile in profiles.iter().cloned() {
-            let start_date = Utc::now();
-            let start = Instant::now();
-
             let project_path = opts.project_path.as_ref().unwrap_or(&opts.repo_path);
             let results = cargo::time_build(project_path, profile)?;
-
-            let dur = start.elapsed();
 
             let mut data = data.get_mut()?;
             data.timings.entry(commit.clone()).or_insert(vec![]).push(results.full);
@@ -144,6 +139,11 @@ fn run_all(opts: &GlobalOptions) -> Result<(), Error> {
             }
 
             data.commit()?;
+
+            if let Some(touched) = results.touched {
+                // NB project_path, not repo_path
+                git::checkout_file(project_path, &touched)?;
+            }
         }
     }
 
