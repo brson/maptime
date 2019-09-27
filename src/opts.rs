@@ -3,7 +3,7 @@ use std::env::Args;
 use std::convert::TryFrom;
 use std::fmt::{self, Display, Formatter};
 use std::error::Error as StdError;
-use crate::commit_list::{CommitInput, CommitList};
+use crate::commit_list::CommitInput;
 use std::str::FromStr;
 use structopt::StructOpt;
 

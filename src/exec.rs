@@ -5,7 +5,6 @@ use crate::git;
 use std::path::Path;
 use atomic_blobject::AtomBlob;
 use std::error::Error as StdError;
-use crate::commit_list::CommitList;
 use crate::opts::{Options, Command, GlobalOptions};
 use crate::data::Data;
 use crate::commit_list::CommitInput;
@@ -18,8 +17,8 @@ pub fn run_command(opts: &Options) -> Result<(), Error> {
         Command::IngestCommit(ref commit) => {
             ingest_commit(&opts.global, commit.clone())
         }
-        Command::IngestCommitList { .. } => {
-            panic!()
+        Command::IngestCommitList { ref file } => {
+            ingest_commit_list(&opts.global, file)
         }
         Command::ResolveCommits => {
             resolve_commits(&opts.global)
@@ -72,6 +71,19 @@ fn ingest_commit(opts: &GlobalOptions, commit: CommitInput) -> Result<(), Error>
 
     data.unresolved_commits.push(commit);
     Ok(data.commit()?)
+}
+
+fn ingest_commit_list(opts: &GlobalOptions, file: &Path) -> Result<(), Error> {
+    let list = parse_list::from_file_lines::<CommitInput>(file).map_err(|e| Error::CommitListIo(e))?;
+    let list: Vec<Result<CommitInput, _>> = list.collect();
+    let list: Result<Vec<CommitInput>, _> = list.into_iter().collect();
+    let list = list.map_err(|e| Error::CommitParse(e))?;
+
+    let mut data = load_data(&opts.db_file)?;
+    let mut data = data.get_mut()?;
+    data.unresolved_commits.extend(list);
+
+    Ok(())
 }
 
 fn resolve_commits(opts: &GlobalOptions) -> Result<(), Error> {
@@ -167,6 +179,10 @@ pub enum Error {
     NoCommits,
     #[display(fmt = "running cargo")]
     Cargo(crate::cargo::Error),
+    #[display(fmt = "commit list I/O")]
+    CommitListIo(std::io::Error),
+    #[display(fmt = "parsing comit")]
+    CommitParse(parse_list::ParseListError<crate::commit_list::Error>),
 }
 
 impl StdError for Error {
@@ -177,14 +193,16 @@ impl StdError for Error {
             Error::UnresolvedCommits => None,
             Error::NoCommits => None,
             Error::Cargo(ref e) => Some(e),
+            Error::CommitListIo(ref e) => Some(e),
+            Error::CommitParse(ref e) => Some(e),
         }
     }
 }
 
 impl From<atomic_blobject::Error> for Error {
     fn from(e: atomic_blobject::Error) -> Error {
-        Error::AtomBlob(e)
-    }
+        Error::AtomBlob(e) 
+   }
 }
 
 impl From<crate::git::Error> for Error {
