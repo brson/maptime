@@ -55,3 +55,11 @@ impl AsRef<str> for RebuildType {
         }
     }
 }
+
+impl Data {
+    pub fn sorted_commits(&self) -> Vec<CommitId> {
+        let mut commits: Vec<_> = self.commits.values().collect();
+        commits.sort_by_key(|c| c.date);
+        commits.into_iter().map(|c| c.id.clone()).collect()
+    }
+}

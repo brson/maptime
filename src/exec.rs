@@ -48,12 +48,12 @@ fn list_commits(opts: &GlobalOptions) -> Result<(), Error> {
         some_commits = true;
     }
     if !data.commits.is_empty() {
-        let mut commits: Vec<_> = data.commits.values().collect();
-        commits.sort_by_key(|c| c.date);
+        let commits = data.sorted_commits();
         
         println!("commits");
         println!("-------");
         for commit in &commits {
+            let commit = data.commits.get(commit);
             println!("{:?}", commit);
         }
         println!();
@@ -128,19 +128,14 @@ fn run_all(opts: &GlobalOptions) -> Result<(), Error> {
         }
     }
 
-    let mut commits: Vec<_> = {
-        let data = data.get()?;
-        data.commits.values().cloned().collect()
-    };
-
-    commits.sort_by_key(|c| c.date);
+    let commits = data.get()?.sorted_commits();
 
     let start_commit = git::current_commit(&opts.repo_path)?;
     println!("saving start commit {}", start_commit.as_ref());
 
     for commit in &commits {
-        println!("checking out {}", commit.id.as_ref());
-        git::checkout(&opts.repo_path, &commit.id)?;
+        println!("checking out {}", commit.as_ref());
+        git::checkout(&opts.repo_path, &commit)?;
 
         let profiles = [Profile::Dev, Profile::Release];
 
@@ -149,10 +144,10 @@ fn run_all(opts: &GlobalOptions) -> Result<(), Error> {
             let results = cargo::time_build(project_path, profile)?;
 
             let mut data = data.get_mut()?;
-            data.timings.entry(commit.id.clone()).or_insert(vec![]).push(results.full);
+            data.timings.entry(commit.clone()).or_insert(vec![]).push(results.full);
 
             if let Some(partial_timing) = results.partial {
-                data.timings.entry(commit.id.clone()).or_insert(vec![]).push(partial_timing);
+                data.timings.entry(commit.clone()).or_insert(vec![]).push(partial_timing);
             }
 
             data.commit()?;
