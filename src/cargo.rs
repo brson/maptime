@@ -22,6 +22,8 @@ pub fn time_build(path: &Path, profile: Profile) -> Result<BuildResultPair, Erro
 
     prime_toolchain(path)?;
 
+    cargo_fetch(path)?;
+
     let full_result = cargo_time_build(path, profile, RebuildType::Full)?;
     if full_result.result == BuildResult::Failure {
         return Ok(BuildResultPair {
@@ -55,6 +57,23 @@ fn cargo_clean(path: &Path) -> Result<(), Error> {
         Ok(())
     } else {
         Err(Error::CargoClean)
+    }
+}
+
+fn cargo_fetch(path: &Path) -> Result<(), Error> {
+    println!("running `cargo fetch`");
+
+    let mut cmd = Command::new("cargo");
+    let cmd = cmd
+        .current_dir(path)
+        .arg("fetch");
+
+    let status = cmd.status()?;
+
+    if status.success() {
+        Ok(())
+    } else {
+        Err(Error::CargoFetch)
     }
 }
 
@@ -129,6 +148,8 @@ pub enum Error {
     Io(std::io::Error),
     #[display(fmt = "cargo clean failed")]
     CargoClean,
+    #[display(fmt = "cargo fetch failed")]
+    CargoFetch,
     #[display(fmt = "unable to find file to touch for partial rebuild")]
     CantTouch,
     #[display(fmt = "priming toolchain")]
@@ -140,6 +161,7 @@ impl StdError for Error {
         match self {
             Error::Io(ref e) => Some(e),
             Error::CargoClean => None,
+            Error::CargoFetch => None,
             Error::CantTouch => None,
             Error::PrimeToolchain => None,
         }
