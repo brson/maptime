@@ -42,12 +42,20 @@ pub fn time_build(path: &Path, profile: Profile) -> Result<BuildResultPair, Erro
     })
 }
 
+fn toolchain_cmd(path: &Path, cmd: &str) -> Result<Command, Error> {
+    let path = path.canonicalize()?;
+    let mut cmd = Command::new(cmd);
+    cmd.current_dir(path);
+    // FIME: This makes it so people can't use the env var, but lets maptime be run via cargo run
+    cmd.env_remove("RUSTUP_TOOLCHAIN");
+    Ok(cmd)
+}
+
 fn cargo_clean(path: &Path) -> Result<(), Error> {
     println!("running `cargo clean`");
 
-    let mut cmd = Command::new("cargo");
+    let mut cmd = toolchain_cmd(path, "cargo")?;
     let cmd = cmd
-        .current_dir(path)
         .arg("clean");
 
     let status = cmd.status()?;
@@ -62,9 +70,8 @@ fn cargo_clean(path: &Path) -> Result<(), Error> {
 fn cargo_fetch(path: &Path) -> Result<(), Error> {
     println!("running `cargo fetch`");
 
-    let mut cmd = Command::new("cargo");
+    let mut cmd = toolchain_cmd(path, "cargo")?;
     let cmd = cmd
-        .current_dir(path)
         .arg("fetch");
 
     let status = cmd.status()?;
@@ -79,9 +86,8 @@ fn cargo_fetch(path: &Path) -> Result<(), Error> {
 fn prime_toolchain(path: &Path) -> Result<(), Error> {
     println!("running `rustc -V` to prime the toolchain");
 
-    let mut cmd = Command::new("rustc");
+    let mut cmd = toolchain_cmd(path, "rustc")?;
     let cmd = cmd
-        .current_dir(path)
         .arg("-V");
 
     let status = cmd.status()?;
@@ -96,9 +102,8 @@ fn prime_toolchain(path: &Path) -> Result<(), Error> {
 fn cargo_time_build(path: &Path, profile: Profile, rebuild_type: RebuildType) -> Result<Timing, Error> {
     println!("running `cargo build` for {} profile, {} rebuild", profile.as_ref(), rebuild_type.as_ref());
 
-    let mut cmd = Command::new("cargo");
+    let mut cmd = toolchain_cmd(path, "cargo")?;
     let mut cmd = cmd
-        .current_dir(path)
         .env("CARGO_BUILD_PIPELINING", "true")
         .arg("build");
 
