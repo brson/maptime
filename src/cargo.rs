@@ -1,3 +1,4 @@
+use std::io::Write;
 use std::path::PathBuf;
 use std::fs::OpenOptions;
 use std::time::{Instant, Duration};
@@ -131,7 +132,12 @@ fn touch_something(path: &Path) -> Result<PathBuf, Error> {
         let path = path.join(&candidate);
         let file = OpenOptions::new().append(true).open(path);
         match file {
-            Ok(_) => return Ok(PathBuf::from(candidate)),
+            Ok(mut file) => {
+                write!(file, "\n");
+                file.flush()?;
+                
+                return Ok(PathBuf::from(candidate));
+            }
             Err(ref e) if e.kind() == std::io::ErrorKind::NotFound => continue,
             Err(e) => return Err(Error::Io(e)),
         }
