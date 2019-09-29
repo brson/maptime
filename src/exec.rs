@@ -1,3 +1,6 @@
+use std::convert::TryFrom;
+use crate::gnuplot::{self, PlotData, Series, Entry};
+use crate::data::{BuildResult, Profile, RebuildType, Timing};
 use crate::cargo;
 use std::time::{Instant, Duration};
 use chrono::{DateTime, Utc};
@@ -28,6 +31,9 @@ pub fn run_command(opts: &Options) -> Result<(), Error> {
         }
         Command::DumpResults => {
             dump_results(&opts.global)
+        }
+        Command::Plot { ref file } => {
+            plot(&opts.global, file)
         }
     }
 }
@@ -116,8 +122,6 @@ fn resolve_commits(opts: &GlobalOptions) -> Result<(), Error> {
 }
 
 fn run_all(opts: &GlobalOptions) -> Result<(), Error> {
-    use crate::data::{Profile, Timing, RebuildType};
-    
     let mut data = load_data(&opts.db_file)?;
     let mut counter = 0;
 
@@ -193,6 +197,58 @@ fn dump_results(opts: &GlobalOptions) -> Result<(), Error> {
     Ok(())
 }
 
+fn plot(opts: &GlobalOptions, plotfile: &Path) -> Result<(), Error> {
+    let mut data = load_data(&opts.db_file)?;
+    let data = data.get()?;
+
+    let commits = data.sorted_commits();
+
+    let ref series_descs = [
+        (Profile::Dev, RebuildType::Full),
+        (Profile::Dev, RebuildType::Partial),
+        (Profile::Release, RebuildType::Full),
+        (Profile::Release, RebuildType::Partial),
+    ];
+    let mut serieses = Vec::new();
+    for series_desc in series_descs {
+        let mut new_series = Vec::new();
+        for commit in &commits {
+            let timings = data.timings.get(commit);
+            if let Some(timings) = timings {
+                let timings = timings.iter().filter(|t| t.result == BuildResult::Success);
+                let timings = timings.filter(|t| t.profile == series_desc.0);
+                let timings = timings.filter(|t| t.rebuild_type == series_desc.1);
+                let timings = timings.map(|t| t.duration);
+                let (count, sum) = timings.fold((0, Duration::default()), |(count, sum), duration| (count + 1, sum + duration));
+                if count == 0 {
+                    println!("warning: no timings for profile {} type {}", series_desc.0.as_ref(), series_desc.1.as_ref());
+                }
+                let avg = sum / u32::try_from(count).expect("count should fit in u32");
+                let commit = data.commits.get(commit);
+                let commit = commit.expect("commit with timing should exists");
+                let commit = commit.clone();
+                let entry = Entry {
+                    commit,
+                    duration: avg,
+                };
+                new_series.push(entry);
+            } else {
+                println!("warning: no timings for {}", commit.as_ref());
+            }
+        }
+
+        serieses.push(Series {
+            profile: series_desc.0,
+            rebuild_type: series_desc.1,
+            values: new_series,
+        });
+    }
+
+    let plotdata = PlotData(serieses);
+
+    Ok(gnuplot::plot(plotdata, plotfile)?)
+}
+
 #[derive(Display, Debug)]
 pub enum Error {
     #[display(fmt = "loading blobject")]
@@ -209,6 +265,8 @@ pub enum Error {
     CommitListIo(std::io::Error),
     #[display(fmt = "parsing commit")]
     CommitParse(parse_list::ParseListError<crate::commit_list::Error>),
+    #[display(fmt = "running gnuplot")]
+    GnuPlot(crate::gnuplot::Error),
 }
 
 impl StdError for Error {
@@ -221,6 +279,7 @@ impl StdError for Error {
             Error::Cargo(ref e) => Some(e),
             Error::CommitListIo(ref e) => Some(e),
             Error::CommitParse(ref e) => Some(e),
+            Error::GnuPlot(ref e) => Some(e),
         }
     }
 }
@@ -240,5 +299,11 @@ impl From<crate::git::Error> for Error {
 impl From<crate::cargo::Error> for Error {
     fn from(e: crate::cargo::Error) -> Error {
         Error::Cargo(e)
+    }
+}
+
+impl From<crate::gnuplot::Error> for Error {
+    fn from(e: crate::gnuplot::Error) -> Error {
+        Error::GnuPlot(e)
     }
 }

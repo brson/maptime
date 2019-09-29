@@ -14,6 +14,7 @@ mod data;
 mod exec;
 mod git;
 mod opts;
+mod gnuplot;
 
 fn main() {
     use std::process;

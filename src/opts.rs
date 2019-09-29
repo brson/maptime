@@ -27,6 +27,10 @@ pub enum Command {
     ResolveCommits,
     RunAll,
     DumpResults,
+    Plot {
+        #[structopt(long, default_value = "maptime.svg")]
+        file: PathBuf,
+    }
 }
 
 #[derive(Debug, StructOpt)]

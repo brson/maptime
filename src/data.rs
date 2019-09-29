@@ -35,7 +35,7 @@ pub enum BuildResult { Success, Failure }
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Copy, Clone)]
 pub enum Profile { Dev, Release }
 
-#[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Copy, Clone)]
 pub enum RebuildType { Full, Partial }
 
 impl AsRef<str> for Profile {
