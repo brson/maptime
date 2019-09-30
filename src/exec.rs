@@ -1,3 +1,4 @@
+use crate::commit_id::CommitId;
 use std::convert::TryFrom;
 use crate::gnuplot::{self, PlotData, Series, Entry};
 use crate::data::{BuildResult, Profile, RebuildType, Timing};
@@ -28,6 +29,9 @@ pub fn run_command(opts: &Options) -> Result<(), Error> {
         }
         Command::RunAll => {
             run_all(&opts.global)
+        }
+        Command::CatchUp => {
+            catch_up(&opts.global)
         }
         Command::DumpResults => {
             dump_results(&opts.global)
@@ -123,6 +127,47 @@ fn resolve_commits(opts: &GlobalOptions) -> Result<(), Error> {
 
 fn run_all(opts: &GlobalOptions) -> Result<(), Error> {
     let mut data = load_data(&opts.db_file)?;
+    let data = data.get()?;
+
+    let mut plan = vec![];
+    for commit in data.commits.keys() {
+        plan.push((commit.clone(), 1));
+    }
+
+    drop(data);
+
+    run(opts, &RunPlan(plan))
+}
+
+fn catch_up(opts: &GlobalOptions) -> Result<(), Error> {
+    let mut data = load_data(&opts.db_file)?;
+    let data = data.get()?;
+
+    let commits = data.sorted_commits();
+
+    let mut max = 0;
+    for commit in &commits {
+        let count = data.timings.get(commit).unwrap_or(&vec![]).len();
+        max = count.max(max);
+    }
+
+    let mut plan = vec![];
+    for commit in &commits {
+        let count = data.timings.get(commit).unwrap_or(&vec![]).len();
+        if count < max {
+            plan.push((commit.clone(), u32::try_from(max - count).expect("small timing count")));
+        }
+    }
+
+    drop(data);
+
+    run(opts, &RunPlan(plan))
+}
+
+struct RunPlan(Vec<(CommitId, u32)>);
+
+fn run(opts: &GlobalOptions, plan: &RunPlan) -> Result<(), Error> {
+    let mut data = load_data(&opts.db_file)?;
     let mut counter = 0;
 
     {
@@ -135,33 +180,33 @@ fn run_all(opts: &GlobalOptions) -> Result<(), Error> {
         }
     }
 
-    let commits = data.get()?.sorted_commits();
-
     let start_commit = git::current_commit(&opts.repo_path)?;
     println!("saving start commit {}", start_commit.as_ref());
 
-    for commit in &commits {
+    for &(ref commit, count) in &plan.0 {
         println!("checking out {}", commit.as_ref());
         git::checkout(&opts.repo_path, &commit)?;
 
         let profiles = [Profile::Dev, Profile::Release];
 
-        for profile in profiles.iter().cloned() {
-            let project_path = opts.project_path.as_ref().unwrap_or(&opts.repo_path);
-            let results = cargo::time_build(project_path, profile)?;
+        for _ in 0..count {
+            for profile in profiles.iter().cloned() {
+                let project_path = opts.project_path.as_ref().unwrap_or(&opts.repo_path);
+                let results = cargo::time_build(project_path, profile)?;
 
-            let mut data = data.get_mut()?;
-            data.timings.entry(commit.clone()).or_insert(vec![]).push(results.full);
+                let mut data = data.get_mut()?;
+                data.timings.entry(commit.clone()).or_insert(vec![]).push(results.full);
 
-            if let Some(partial_timing) = results.partial {
-                data.timings.entry(commit.clone()).or_insert(vec![]).push(partial_timing);
-            }
+                if let Some(partial_timing) = results.partial {
+                    data.timings.entry(commit.clone()).or_insert(vec![]).push(partial_timing);
+                }
 
-            data.commit()?;
+                data.commit()?;
 
-            if let Some(touched) = results.touched {
-                // NB project_path, not repo_path
-                git::checkout_file(project_path, &touched)?;
+                if let Some(touched) = results.touched {
+                    // NB project_path, not repo_path
+                    git::checkout_file(project_path, &touched)?;
+                }
             }
         }
 
