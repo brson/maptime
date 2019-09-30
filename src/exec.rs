@@ -221,7 +221,8 @@ fn plot(opts: &GlobalOptions, plotfile: &Path) -> Result<(), Error> {
                 let timings = timings.map(|t| t.duration);
                 let (count, sum) = timings.fold((0, Duration::default()), |(count, sum), duration| (count + 1, sum + duration));
                 if count == 0 {
-                    println!("warning: no timings for profile {} type {}", series_desc.0.as_ref(), series_desc.1.as_ref());
+                    println!("warning: no timings for {}, profile {} type {}", commit.as_ref(), series_desc.0.as_ref(), series_desc.1.as_ref());
+                    continue;
                 }
                 let avg = sum / u32::try_from(count).expect("count should fit in u32");
                 let commit = data.commits.get(commit);
