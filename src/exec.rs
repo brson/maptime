@@ -33,6 +33,9 @@ pub fn run_command(opts: &Options) -> Result<(), Error> {
         Command::CatchUp => {
             catch_up(&opts.global)
         }
+        Command::FillGaps => {
+            fill_gaps(&opts.global)
+        }
         Command::DumpResults => {
             dump_results(&opts.global)
         }
@@ -156,6 +159,24 @@ fn catch_up(opts: &GlobalOptions) -> Result<(), Error> {
         let count = data.timings.get(commit).unwrap_or(&vec![]).len();
         if count < max {
             plan.push((commit.clone(), u32::try_from(max - count).expect("small timing count")));
+        }
+    }
+
+    drop(data);
+
+    run(opts, &RunPlan(plan))
+}
+
+fn fill_gaps(opts: &GlobalOptions) -> Result<(), Error> {
+    let mut data = load_data(&opts.db_file)?;
+    let data = data.get()?;
+
+    let commits = data.sorted_commits();
+
+    let mut plan = vec![];
+    for commit in &commits {
+        if !data.timings.get(commit).is_some() {
+            plan.push((commit.clone(), 1));
         }
     }
 

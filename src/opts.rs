@@ -27,6 +27,7 @@ pub enum Command {
     ResolveCommits,
     RunAll,
     CatchUp,
+    FillGaps,
     DumpResults,
     Plot {
         #[structopt(long, default_value = "maptime.svg")]
