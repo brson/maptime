@@ -162,9 +162,28 @@ fn catch_up(opts: &GlobalOptions) -> Result<(), Error> {
         }
     }
 
+    println!("{:#?}", plan);
+
+    plan.sort_by_key(|p| p.1);
+
+    let mut new_plan = vec![];
+    loop {
+        let mut keep_going = false;
+        for &mut (ref commit, ref mut count) in &mut plan {
+            if *count > 0 {
+                *count -= 1;
+                new_plan.push((commit.clone(), 1));
+                keep_going = true;
+            }
+        }
+        if !keep_going { break }
+    }
+
     drop(data);
 
-    run(opts, &RunPlan(plan))
+    println!("catch-up plan: {:#?}", new_plan);
+
+    run(opts, &RunPlan(new_plan))
 }
 
 fn fill_gaps(opts: &GlobalOptions) -> Result<(), Error> {
