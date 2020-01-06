@@ -7,6 +7,12 @@ use hex::FromHexError;
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize, Clone)]
 pub struct CommitId(String);
 
+impl CommitId {
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
 impl FromStr for CommitId {
     type Err = Error;
 
