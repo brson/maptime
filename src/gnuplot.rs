@@ -22,14 +22,18 @@ pub struct Entry {
 pub fn plot(data: PlotData, file: &Path) -> Result<(), Error> {
     let mut fg = Figure::new();
     fg.set_terminal("svg size 600, 400", &file.to_str().ok_or(Error::PlotFile)?);
+    fg.set_title("build times");
     let mut fg2d = fg.axes2d();
-    fg2d.set_x_ticks(Some((AutoOption::Auto, 0)), &[TickOption::Format("%Y-%m-%d")], &[LabelOption::Rotate(270_f64)]);
+    fg2d.set_x_label("date", &[]);
+    fg2d.set_y_label("compile-time", &[]);
+    fg2d.set_x_time(true);
+    fg2d.set_x_ticks(Some((AutoOption::Auto, 0)), &[TickOption::Format("%Y-%m-%d")], &[LabelOption::Rotate(310_f64)]);
+    fg2d.set_y_ticks(Some((AutoOption::Auto, 0)), &[TickOption::Format("%gs")], &[]);
 
     for series in data.0 {
         let x = series.values.iter().map(|e| e.commit.date.timestamp());
         let y = series.values.iter().map(|e| e.duration);
         fg2d.lines(x, y, &[PlotOption::Caption(&format!("{}+{}", series.profile.as_ref(), series.rebuild_type.as_ref()))]);
-        fg2d.set_x_time(true);
     }
 
     fg.echo(&mut std::io::stdout());

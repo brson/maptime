@@ -10,7 +10,7 @@ edition = "2018"
 atomic_blobject = "0.1.0"
 chrono = { version = "0.4.9", features = ["serde"] }
 clap = "2.33.0"
-gnuplot = "0.0.31"
+gnuplot = "0.0.33"
 hex = "0.3"
 derive_more = "0.15.0"
 parse_list = "2.0.0"
