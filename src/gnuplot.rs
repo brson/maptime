@@ -40,7 +40,9 @@ pub fn plot(data: PlotData, file: &Path) -> Result<(), Error> {
         for series in &data.0 {
             for v in series.values.iter() {
                 use gnuplot::Coordinate;
-                fg2d.label(&format!("{}:{}", v.commit.date.format("%Y-%m-%d"), v.commit.id.as_str()),
+                use std::borrow::Borrow;
+                let label = format!("{}\\n{}\\n{}", v.commit.date.format("%Y-%m-%d"), v.commit.id.as_str(), v.commit.note.as_ref().map(Borrow::borrow).unwrap_or("<no description>"));
+                fg2d.label(&label,
                            Coordinate::Axis(v.commit.date.timestamp() as _),
                            Coordinate::Axis(v.duration.as_secs() as _),
                            &[LabelOption::Hypertext, LabelOption::MarkerSymbol('O'), LabelOption::MarkerSize(0.4)]);
