@@ -40,16 +40,19 @@ pub fn plot(data: PlotData, file: &Path) -> Result<(), Error> {
         for series in &data.0 {
             for v in series.values.iter() {
                 use gnuplot::Coordinate;
-                fg2d.label(&format!("{}", v.commit.date.format("%Y-%m-%d")),
+                fg2d.label(&format!("{}:{}", v.commit.date.format("%Y-%m-%d"), v.commit.id.as_str()),
                            Coordinate::Axis(v.commit.date.timestamp() as _),
                            Coordinate::Axis(v.duration.as_secs() as _),
-                           &[LabelOption::Hypertext, LabelOption::MarkerSymbol('O'), LabelOption::MarkerSize(0.5)]);
+                           &[LabelOption::Hypertext, LabelOption::MarkerSymbol('O'), LabelOption::MarkerSize(0.4)]);
             }
         }
     }
 
-    fg.save_to_svg(&file.to_str().ok_or(Error::PlotFile)?,
-                   600, 400).map_err(Error::GnuplotInit)?;
+    //fg.save_to_svg(&file.to_str().ok_or(Error::PlotFile)?,
+    //               600, 400).map_err(Error::GnuplotInit)?;
+
+    fg.set_terminal("svg size 600, 400 dynamic mouse standalone", &file.to_str().ok_or(Error::PlotFile)?);
+    fg.show();
 
     fg.echo(&mut std::io::stdout());
 
