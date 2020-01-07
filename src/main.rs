@@ -15,6 +15,7 @@ mod exec;
 mod git;
 mod opts;
 mod gnuplot;
+mod bisect;
 
 fn main() {
     use std::process;

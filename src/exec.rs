@@ -12,6 +12,7 @@ use std::error::Error as StdError;
 use crate::opts::{Options, Command, GlobalOptions};
 use crate::data::Data;
 use crate::commit_list::CommitInput;
+use crate::bisect;
 
 pub fn run_command(opts: &Options) -> Result<(), Error> {
     match opts.cmd {
@@ -41,6 +42,9 @@ pub fn run_command(opts: &Options) -> Result<(), Error> {
         }
         Command::Plot { ref file } => {
             plot(&opts.global, file)
+        }
+        Command::Bisect => {
+            bisect(&opts.global)
         }
     }
 }
@@ -283,6 +287,11 @@ fn dump_results(opts: &GlobalOptions) -> Result<(), Error> {
 }
 
 fn plot(opts: &GlobalOptions, plotfile: &Path) -> Result<(), Error> {
+    let plotdata = get_plot_data(opts)?;
+    Ok(gnuplot::plot(plotdata, plotfile)?)
+}
+
+fn get_plot_data(opts: &GlobalOptions) -> Result<PlotData, Error> {
     let mut data = load_data(&opts.db_file)?;
     let data = data.get()?;
 
@@ -330,9 +339,12 @@ fn plot(opts: &GlobalOptions, plotfile: &Path) -> Result<(), Error> {
         });
     }
 
-    let plotdata = PlotData(serieses);
+    Ok(PlotData(serieses))
+}
 
-    Ok(gnuplot::plot(plotdata, plotfile)?)
+fn bisect(opts: &GlobalOptions) -> Result<(), Error> {
+    let plotdata = get_plot_data(opts)?;
+    Ok(bisect::bisect(plotdata)?)
 }
 
 #[derive(Display, Debug)]
@@ -353,6 +365,8 @@ pub enum Error {
     CommitParse(parse_list::ParseListError<crate::commit_list::Error>),
     #[display(fmt = "running gnuplot")]
     GnuPlot(crate::gnuplot::Error),
+    #[display(fmt = "bisecting")]
+    Bisect(crate::bisect::Error),
 }
 
 impl StdError for Error {
@@ -366,6 +380,7 @@ impl StdError for Error {
             Error::CommitListIo(ref e) => Some(e),
             Error::CommitParse(ref e) => Some(e),
             Error::GnuPlot(ref e) => Some(e),
+            Error::Bisect(ref e) => Some(e),
         }
     }
 }
@@ -391,5 +406,11 @@ impl From<crate::cargo::Error> for Error {
 impl From<crate::gnuplot::Error> for Error {
     fn from(e: crate::gnuplot::Error) -> Error {
         Error::GnuPlot(e)
+    }
+}
+
+impl From<crate::bisect::Error> for Error {
+    fn from(e: crate::bisect::Error) -> Error {
+        Error::Bisect(e)
     }
 }
