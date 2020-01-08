@@ -344,7 +344,7 @@ fn get_plot_data(opts: &GlobalOptions) -> Result<PlotData, Error> {
 
 fn bisect(opts: &GlobalOptions) -> Result<(), Error> {
     let plotdata = get_plot_data(opts)?;
-    Ok(bisect::bisect(plotdata)?)
+    Ok(&opts.repo_path, bisect::bisect(plotdata)?)
 }
 
 #[derive(Display, Debug)]

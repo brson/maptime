@@ -14,6 +14,7 @@ pub struct Series {
     pub values: Vec<Entry>,
 }
 
+#[derive(Debug, Clone)]
 pub struct Entry {
     pub commit: Commit,
     pub duration: Duration,

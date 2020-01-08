@@ -40,19 +40,19 @@ pub fn read_commit_id(path: &Path, commit: &str) -> Result<CommitId, Error> {
 }
 
 pub fn checkout(path: &Path, commit: &CommitId) -> Result<(), Error> {
-    run_git(path, "checkout", commit.as_ref(), &[]).map(|_| ())
+    run_git_c(path, "checkout", commit.as_ref(), &[]).map(|_| ())
 }
 
 pub fn checkout_file(path: &Path, file: &Path) -> Result<(), Error> {
     let file = file.to_str().ok_or(Error::BadPath)?;
-    run_git(path, "checkout", "HEAD", &[file, "-f"]).map(|_| ())
+    run_git_c(path, "checkout", "HEAD", &[file, "-f"]).map(|_| ())
 }
 
 fn read_commit_stdout(path: &Path, commit: &str, format: &str) -> Result<String, Error> {
-    run_git(path, "log", commit, &["-1", &format!("--pretty={}", format)])
+    run_git_c(path, "log", commit, &["-1", &format!("--pretty={}", format)])
 }
 
-fn run_git(path: &Path, gitcmd: &str, commit: &str, args: &[&str]) -> Result<String, Error> {
+fn run_git_c(path: &Path, gitcmd: &str, commit: &str, args: &[&str]) -> Result<String, Error> {
     let mut cmd = Command::new("git");
     let cmd = cmd
         .arg("-C")
@@ -78,10 +78,35 @@ fn run_git(path: &Path, gitcmd: &str, commit: &str, args: &[&str]) -> Result<Str
     Ok(stdout.to_string())
 }
 
+fn run_git(path: &Path, gitcmd: &str, args: &[&str]) -> Result<String, Error> {
+    let mut cmd = Command::new("git");
+    let cmd = cmd
+        .arg("-C")
+        .arg(path)
+        .arg(gitcmd)
+        .args(args);
+
+    println!("executing git -C {} {} {}",
+             path.display(), gitcmd, args.join(" "));
+
+    let out = cmd.output().map_err(|e| Error::GitExec(e))?;
+
+    if !out.status.success() {
+        let stderr = String::from_utf8_lossy(&out.stderr).into_owned();
+        return Err(Error::Git { stderr });
+    }
+
+    let stdout = std::str::from_utf8(&out.stdout).map_err(|e| Error::RawDateParse(e))?;
+    let stdout = stdout.trim();
+
+    Ok(stdout.to_string())
+}
+
 #[derive(Debug)]
 pub enum Error {
     GitExec(std::io::Error),
     GitLog { commit: String, stderr: String },
+    Git { stderr: String },
     RawDateParse(std::str::Utf8Error),
     DateParse(chrono::ParseError),
     ReadCommitId(crate::commit_id::Error),
@@ -93,6 +118,7 @@ impl StdError for Error {
         match self {
             Error::GitExec(ref e) => Some(e),
             Error::GitLog { .. } => None,
+            Error::Git { .. } => None,
             Error::RawDateParse(ref e) => Some(e),
             Error::DateParse(ref e) => Some(e),
             Error::ReadCommitId(ref e) => Some(e),
@@ -109,6 +135,9 @@ impl Display for Error {
             }
             Error::GitLog { ref commit, ref stderr } => {
                 write!(f, "failed to read commit {} from git: {}", commit, stderr)
+            }
+            Error::Git { ref stderr } => {
+                write!(f, "failed to run git: {}", stderr)
             }
             Error::RawDateParse(_) => {
                 write!(f, "converting git date to UTF-8")
