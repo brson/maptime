@@ -78,7 +78,7 @@ fn run_git_c(path: &Path, gitcmd: &str, commit: &str, args: &[&str]) -> Result<S
     Ok(stdout.to_string())
 }
 
-fn run_git(path: &Path, gitcmd: &str, args: &[&str]) -> Result<String, Error> {
+pub fn run_git(path: &Path, gitcmd: &str, args: &[&str]) -> Result<String, Error> {
     let mut cmd = Command::new("git");
     let cmd = cmd
         .arg("-C")

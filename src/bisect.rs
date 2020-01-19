@@ -1,4 +1,7 @@
-use crate::opts::GlobalOpts;
+use std::str::FromStr;
+use crate::cargo;
+use std::cmp::{self, Ordering};
+use crate::opts::GlobalOptions;
 use std::error::Error as StdError;
 use crate::gnuplot::{PlotData, Entry};
 use crate::data::{Profile, RebuildType};
@@ -6,6 +9,8 @@ use std::mem;
 use std::time::Duration;
 use crate::git;
 use std::path::Path;
+use std::num;
+use crate::commit_id::CommitId;
 
 #[derive(Debug, Clone)]
 struct BisectRange {
@@ -16,18 +21,76 @@ struct BisectRange {
     diff: Duration,
 }
 
-pub fn bisect(opts: &GlobalOpts, data: PlotData) -> Result<(), Error> {
+pub fn bisect(opts: &GlobalOptions, data: PlotData) -> Result<(), Error> {
     let range = find_biggest_range(data)?;
     println!("bisecting {:#?}", range);
     bisect_range(opts, range)
 }
 
-fn bisect_range(opts: &GlobalOpts, range: BisectRange) -> Result<(), Error> {
-    git::run_git(opts.repo_path, "bisect",
-                 &["start",
-                   range.last.commit.id.as_str(),
-                   range.first.commit.id.as_str()])?;
-    panic!()
+fn bisect_range(opts: &GlobalOptions, range: BisectRange) -> Result<(), Error> {
+    let hysteresis = range.diff / 10;
+    let max = cmp::max(range.first.duration, range.last.duration);
+    let min = cmp::min(range.first.duration, range.last.duration);
+    let mid = max - (range.diff / 2);
+    let ord = range.first.duration.cmp(&range.last.duration);
+    let is_new = |d: Duration| {
+        if ord == Ordering::Less {
+            d < mid - hysteresis
+        } else {
+            d > mid + hysteresis
+        }
+    };
+
+    println!("max: {:?}, min: {:?}, mid: {:?}, ord: {:?}, hyst: {:?}",
+             max, min, mid, ord, hysteresis);
+
+    let out = git::run_git(&opts.repo_path, "bisect",
+                           &["start",
+                             range.last.commit.id.as_str(),
+                             range.first.commit.id.as_str()])?;
+    println!("{}", out);
+
+    let mut commit = parse_commit_from_stdout(&out)?;
+
+    loop {
+        let profile = range.profile;
+        let project_path = opts.project_path.as_ref().unwrap_or(&opts.repo_path);
+        let results = cargo::time_build(project_path, profile)?;
+
+        let timing;
+        if range.rebuild_type == RebuildType::Full {
+            timing = results.full;
+        } else {
+            timing = results.partial.ok_or_else(|| Error::NoPartialBuild(commit.clone()))?;
+        }
+
+        let out;
+        if is_new(timing.duration) {
+            out = git::run_git(&opts.repo_path, "bisect", &["new"])?;
+        } else {
+            out = git::run_git(&opts.repo_path, "bisect", &["old"])?;
+        }
+
+        println!("{}", out);
+
+        commit = parse_commit_from_stdout(&out)?;
+
+        panic!();
+    }
+
+    Ok(())
+}
+
+fn parse_commit_from_stdout(s: &str) -> Result<CommitId, Error> {
+    for line in s.lines() {
+        if line.starts_with("[") && line.len() > 40 {
+            let s = &line[1..41];
+            assert!(s.len() == 40);
+            let c = CommitId::from_str(s).map_err(Error::CommitIdParse)?;
+            return Ok(c);
+        }
+    }
+    return Err(Error::BisectParse);
 }
 
 fn find_biggest_range(data: PlotData) -> Result<BisectRange, Error> {
@@ -74,6 +137,39 @@ fn find_biggest_range(data: PlotData) -> Result<BisectRange, Error> {
 pub enum Error {
     #[display(fmt = "not enough commits to bisect")]
     NotEnoughCommits,
+    #[display(fmt = "git error")]
+    Git(crate::git::Error),
+    #[display(fmt = "no partial build for {} during bisect", "_0.as_str()")]
+    NoPartialBuild(CommitId),
+    #[display(fmt = "parsing commit")]
+    CommitIdParse(crate::commit_id::Error),
+    #[display(fmt = "parsing bisect output")]
+    BisectParse,
+    #[display(fmt = "running cargo")]
+    Cargo(crate::cargo::Error),
 }
 
-impl StdError for Error { }
+impl StdError for Error {
+    fn source(&self) -> Option<&(dyn StdError + 'static)> {
+        match self {
+            Error::NotEnoughCommits => None,
+            Error::Git(ref e) => Some(e),
+            Error::NoPartialBuild(_) => None,
+            Error::CommitIdParse(ref e) => Some(e),
+            Error::BisectParse => None,
+            Error::Cargo(ref e) => Some(e),
+        }
+    }
+}
+
+impl From<crate::git::Error> for Error {
+    fn from(e: crate::git::Error) -> Error {
+        Error::Git(e)
+    }
+}
+
+impl From<crate::cargo::Error> for Error {
+    fn from(e: crate::cargo::Error) -> Error {
+        Error::Cargo(e)
+    }
+}
