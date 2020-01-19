@@ -50,6 +50,10 @@ fn bisect_range(opts: &GlobalOptions, range: BisectRange) -> Result<(), Error> {
                              range.first.commit.id.as_str()])?;
     println!("{}", out);
 
+    if !still_bisecting(&out) {
+        return Ok(());
+    }
+
     let mut commit = parse_commit_from_stdout(&out)?;
 
     loop {
@@ -73,12 +77,24 @@ fn bisect_range(opts: &GlobalOptions, range: BisectRange) -> Result<(), Error> {
 
         println!("{}", out);
 
+        if !still_bisecting(&out) {
+            return Ok(());
+        }
+
         commit = parse_commit_from_stdout(&out)?;
 
         panic!();
     }
 
     Ok(())
+}
+
+fn still_bisecting(s: &str) -> bool {
+    if s.contains("Bisecting:") {
+        true
+    } else {
+        false
+    }
 }
 
 fn parse_commit_from_stdout(s: &str) -> Result<CommitId, Error> {
