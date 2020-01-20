@@ -235,7 +235,7 @@ fn run(opts: &GlobalOptions, plan: &RunPlan) -> Result<(), Error> {
 
         for _ in 0..count {
             for profile in profiles.iter().cloned() {
-                let project_path = opts.project_path.as_ref().unwrap_or(&opts.repo_path);
+                let project_path = opts.project_path();
                 let results = cargo::time_build(project_path, profile)?;
 
                 let mut data = data.get_mut()?;

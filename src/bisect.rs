@@ -22,7 +22,7 @@ struct BisectRange {
 }
 
 pub fn bisect(opts: &GlobalOptions, data: PlotData) -> Result<(), Error> {
-    let range = find_biggest_range(data)?;
+    let range = find_biggest_range(opts, data)?;
     println!("bisecting {:#?}", range);
     bisect_range(opts, range)
 }
@@ -60,7 +60,7 @@ fn bisect_range(opts: &GlobalOptions, range: BisectRange) -> Result<(), Error> {
     let mut commit = parse_commit_from_stdout(&out)?;
 
     let profile = range.profile;
-    let project_path = opts.project_path.as_ref().unwrap_or(&opts.repo_path);
+    let project_path = opts.project_path();
 
     loop {
         let results = cargo::time_build(project_path, profile)?;
@@ -116,14 +116,16 @@ fn parse_commit_from_stdout(s: &str) -> Result<CommitId, Error> {
     return Err(Error::BisectParse);
 }
 
-fn find_biggest_range(data: PlotData) -> Result<BisectRange, Error> {
+fn find_biggest_range(opts: &GlobalOptions, data: PlotData) -> Result<BisectRange, Error> {
     let mut biggest: Option<BisectRange> = None;
     for series in data.0 {
         let mut prev: Option<Entry> = None;
         for entry in series.values {
             if let Some(p) = prev {
-                if is_parent(&p.commit, &entry.commit) {
+                if is_parent(opts, &p.commit.id, &entry.commit.id)? {
+                    println!("{} is parent of {}", p.commit.id.as_str(), entry.commit.id.as_str());
                     // No bisection to be done
+                    prev = Some(entry);
                     continue;
                 }
 
@@ -161,9 +163,9 @@ fn find_biggest_range(data: PlotData) -> Result<BisectRange, Error> {
     biggest.ok_or(Error::NotEnoughCommits)
 }
 
-fn is_parent(maybe_parent: &CommitId, next: &CommitId) -> Result<bool, Error> {
-    let actual_parent = git::get_parent(next)?;
-    Ok(maybe_parent == actual_parent)
+fn is_parent(opts: &GlobalOptions, maybe_parent: &CommitId, next: &CommitId) -> Result<bool, Error> {
+    let actual_parent = git::get_parent(opts.project_path(), next)?;
+    Ok(*maybe_parent == actual_parent)
 }
 
 #[derive(Display, Debug)]

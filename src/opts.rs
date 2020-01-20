@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{PathBuf, Path};
 use std::env::Args;
 use std::convert::TryFrom;
 use std::fmt::{self, Display, Formatter};
@@ -44,4 +44,10 @@ pub struct GlobalOptions {
     pub repo_path: PathBuf,
     #[structopt(long)]
     pub project_path: Option<PathBuf>,
+}
+
+impl GlobalOptions {
+    pub fn project_path(&self) -> &Path {
+        self.project_path.as_ref().unwrap_or(&self.repo_path)
+    }
 }

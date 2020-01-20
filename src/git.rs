@@ -53,7 +53,7 @@ fn read_commit_stdout(path: &Path, commit: &str, format: &str) -> Result<String,
 }
 
 pub fn get_parent(path: &Path, commit: &CommitId) -> Result<CommitId, Error> {
-    read_commit_id(path, format!("{}^", read_commit_id))
+    read_commit_id(path, &format!("{}^", commit.as_str()))
 }
 
 fn run_git_c(path: &Path, gitcmd: &str, commit: &str, args: &[&str]) -> Result<String, Error> {
