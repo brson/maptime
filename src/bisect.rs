@@ -53,6 +53,7 @@ fn bisect_range(opts: &GlobalOptions, range: BisectRange) -> Result<(), Error> {
     println!("{}", out);
 
     if !still_bisecting(&out) {
+        git::run_git(&opts.repo_path, "bisect", &["reset"])?;
         return Ok(());
     }
 
@@ -86,6 +87,7 @@ fn bisect_range(opts: &GlobalOptions, range: BisectRange) -> Result<(), Error> {
         println!("duration: {:?}", timing.duration);
 
         if !still_bisecting(&out) {
+            git::run_git(&opts.repo_path, "bisect", &["reset"])?;
             return Ok(());
         }
 
