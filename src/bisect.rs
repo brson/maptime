@@ -41,6 +41,7 @@ fn bisect_range(opts: &GlobalOptions, range: BisectRange) -> Result<(), Error> {
         }
     };
 
+    println!("first: {:?}, last: {:?}", range.first.duration, range.last.duration);
     println!("max: {:?}, min: {:?}, mid: {:?}, ord: {:?}, hyst: {:?}",
              max, min, mid, ord, hysteresis);
 
@@ -83,14 +84,13 @@ fn bisect_range(opts: &GlobalOptions, range: BisectRange) -> Result<(), Error> {
         }
 
         println!("{}", out);
+        println!("duration: {:?}", timing.duration);
 
         if !still_bisecting(&out) {
             return Ok(());
         }
 
         commit = parse_commit_from_stdout(&out)?;
-
-        panic!();
     }
 
     Ok(())
@@ -122,6 +122,11 @@ fn find_biggest_range(data: PlotData) -> Result<BisectRange, Error> {
         let mut prev: Option<Entry> = None;
         for entry in series.values {
             if let Some(p) = prev {
+                if is_parent(&p.commit, &entry.commit) {
+                    // No bisection to be done
+                    continue;
+                }
+
                 let mut t1 = p.duration;
                 let mut t2 = entry.duration;
                 if t1 > t2 {
@@ -154,6 +159,11 @@ fn find_biggest_range(data: PlotData) -> Result<BisectRange, Error> {
         }
     }
     biggest.ok_or(Error::NotEnoughCommits)
+}
+
+fn is_parent(maybe_parent: &CommitId, next: &CommitId) -> Result<bool, Error> {
+    let actual_parent = git::get_parent(next)?;
+    Ok(maybe_parent == actual_parent)
 }
 
 #[derive(Display, Debug)]

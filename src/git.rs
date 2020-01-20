@@ -52,6 +52,10 @@ fn read_commit_stdout(path: &Path, commit: &str, format: &str) -> Result<String,
     run_git_c(path, "log", commit, &["-1", &format!("--pretty={}", format)])
 }
 
+pub fn get_parent(path: &Path, commit: &CommitId) -> Result<CommitId, Error> {
+    read_commit_id(path, format!("{}^", read_commit_id))
+}
+
 fn run_git_c(path: &Path, gitcmd: &str, commit: &str, args: &[&str]) -> Result<String, Error> {
     let mut cmd = Command::new("git");
     let cmd = cmd
