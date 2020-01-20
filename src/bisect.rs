@@ -47,7 +47,9 @@ fn bisect_range(opts: &GlobalOptions, range: BisectRange) -> Result<(), Error> {
     let out = git::run_git(&opts.repo_path, "bisect",
                            &["start",
                              range.last.commit.id.as_str(),
-                             range.first.commit.id.as_str()])?;
+                             range.first.commit.id.as_str(),
+                             "--term-old=old",
+                             "--term-new=new"])?;
     println!("{}", out);
 
     if !still_bisecting(&out) {
@@ -56,10 +58,15 @@ fn bisect_range(opts: &GlobalOptions, range: BisectRange) -> Result<(), Error> {
 
     let mut commit = parse_commit_from_stdout(&out)?;
 
+    let profile = range.profile;
+    let project_path = opts.project_path.as_ref().unwrap_or(&opts.repo_path);
+
     loop {
-        let profile = range.profile;
-        let project_path = opts.project_path.as_ref().unwrap_or(&opts.repo_path);
         let results = cargo::time_build(project_path, profile)?;
+
+        if let Some(touched) = results.touched {
+            git::checkout_file(project_path, &touched)?;
+        }
 
         let timing;
         if range.rebuild_type == RebuildType::Full {
