@@ -41,7 +41,6 @@ fn bisect_range(opts: &GlobalOptions, range: BisectRange) -> Result<(), Error> {
         }
     };
 
-    println!("first: {:?}, last: {:?}", range.first.duration, range.last.duration);
     println!("max: {:?}, min: {:?}, mid: {:?}, ord: {:?}, hyst: {:?}",
              max, min, mid, ord, hysteresis);
 
