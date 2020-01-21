@@ -32,6 +32,8 @@ pub enum Command {
     Plot {
         #[structopt(long, default_value = "maptime.svg")]
         file: PathBuf,
+        #[structopt(long)]
+        no_labels: bool,
     },
     Bisect,
 }

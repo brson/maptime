@@ -40,8 +40,8 @@ pub fn run_command(opts: &Options) -> Result<(), Error> {
         Command::DumpResults => {
             dump_results(&opts.global)
         }
-        Command::Plot { ref file } => {
-            plot(&opts.global, file)
+        Command::Plot { ref file, ref no_labels } => {
+            plot(&opts.global, file, !no_labels)
         }
         Command::Bisect => {
             bisect(&opts.global)
@@ -286,9 +286,9 @@ fn dump_results(opts: &GlobalOptions) -> Result<(), Error> {
     Ok(())
 }
 
-fn plot(opts: &GlobalOptions, plotfile: &Path) -> Result<(), Error> {
+fn plot(opts: &GlobalOptions, plotfile: &Path, labels: bool) -> Result<(), Error> {
     let plotdata = get_plot_data(opts)?;
-    Ok(gnuplot::plot(plotdata, plotfile)?)
+    Ok(gnuplot::plot(plotdata, plotfile, labels)?)
 }
 
 fn get_plot_data(opts: &GlobalOptions) -> Result<PlotData, Error> {

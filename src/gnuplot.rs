@@ -20,7 +20,7 @@ pub struct Entry {
     pub duration: Duration,
 }
 
-pub fn plot(data: PlotData, file: &Path) -> Result<(), Error> {
+pub fn plot(data: PlotData, file: &Path, labels: bool) -> Result<(), Error> {
     let mut fg = Figure::new();
     fg.set_title("build times");
 
@@ -37,7 +37,7 @@ pub fn plot(data: PlotData, file: &Path) -> Result<(), Error> {
         fg2d.lines(x, y, &[PlotOption::Caption(&format!("{}+{}", series.profile.as_ref(), series.rebuild_type.as_ref()))]);
     }
 
-    {
+    if labels {
         for series in &data.0 {
             for v in series.values.iter() {
                 use gnuplot::Coordinate;
