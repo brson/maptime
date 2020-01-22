@@ -35,9 +35,9 @@ fn bisect_range(opts: &GlobalOptions, range: BisectRange) -> Result<(), Error> {
     let ord = range.first.duration.cmp(&range.last.duration);
     let is_new = |d: Duration| {
         if ord == Ordering::Less {
-            d < mid - hysteresis
-        } else {
             d > mid + hysteresis
+        } else {
+            d < mid - hysteresis
         }
     };
 
