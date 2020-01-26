@@ -40,6 +40,11 @@ pub fn plot(data: PlotData, file: &Path, labels: bool) -> Result<(), Error> {
     if labels {
         for series in &data.0 {
             for v in series.values.iter() {
+                // Don't label commits called "prev" - uninteresting
+                if v.commit.note.as_ref().map(Borrow::borrow)  == Some("prev") {
+                    continue;
+                }
+
                 use gnuplot::Coordinate;
                 use std::borrow::Borrow;
                 let label = format!("{}\\n{}\\n{}", v.commit.date.format("%Y-%m-%d"), v.commit.id.as_str(), v.commit.note.as_ref().map(Borrow::borrow).unwrap_or("<no description>"));
