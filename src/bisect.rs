@@ -1,3 +1,4 @@
+use crate::data::BuildResult;
 use std::str::FromStr;
 use crate::cargo;
 use std::cmp::{self, Ordering};
@@ -67,6 +68,18 @@ fn bisect_range(opts: &GlobalOptions, range: BisectRange) -> Result<(), Error> {
 
         if let Some(touched) = results.touched {
             git::checkout_file(project_path, &touched)?;
+        }
+
+        if results.full.result == BuildResult::Failure {
+            println!("bad build");
+            let out = git::run_git(&opts.repo_path, "bisect", &["skip"])?;
+            println!("{}", out);
+            // TODO: does this check work?
+            if still_bisecting(&out) {
+                continue;
+            } else {
+                return Ok(());
+            }
         }
 
         let timing;
