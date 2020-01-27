@@ -71,15 +71,9 @@ fn bisect_range(opts: &GlobalOptions, range: BisectRange) -> Result<(), Error> {
         }
 
         if results.full.result == BuildResult::Failure {
-            println!("bad build");
-            let out = git::run_git(&opts.repo_path, "bisect", &["skip"])?;
-            println!("{}", out);
-            // TODO: does this check work?
-            if still_bisecting(&out) {
-                continue;
-            } else {
-                return Ok(());
-            }
+            println!("bad build - bisect skip");
+            git::run_git(&opts.repo_path, "bisect", &["skip"]);
+            continue;
         }
 
         let timing;
